@@ -1,37 +1,28 @@
-// server.js
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // allow all origins (for testing)
-  }
-});
+const io = new Server(server);
 
-const PORT = 3000;
+app.use(express.static("public"));
 
-// Serve static files if needed
-app.use(express.static('public'));
+io.on("connection", socket => {
+  console.log("User connected:", socket.id);
 
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  // Listen for chat messages
-  socket.on('chat message', (msg) => {
-    console.log('Message:', msg);
-    // Broadcast the message to all clients
-    io.emit('chat message', msg);
+  socket.on("join-room", room => {
+    socket.join(room);
   });
 
-  // Handle disconnect
-  socket.on('disconnect', () => {
-    console.log('A user disconnected:', socket.id);
+  // Receive audio data and broadcast to room
+  socket.on("voice", ({ room, audioChunk }) => {
+    socket.to(room).emit("voice", audioChunk);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+server.listen(3000, () => console.log("Server running on port 3000"));
